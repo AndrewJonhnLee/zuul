@@ -12,4 +12,5 @@ public class TokenModel {
     private long expires_in;
     private String scope;
     private String jti;
+    private String userId;
 }

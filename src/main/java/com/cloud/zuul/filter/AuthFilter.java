@@ -67,13 +67,13 @@ public class AuthFilter extends ZuulFilter {
             String userId=null;
 
             try {
-                Jwts.parser()
+                claims=Jwts.parser()
                         // 验签
                         .setSigningKey(SECRET)
                         // 去掉 Bearer
                         .parseClaimsJws(token.replace("bearer", "").trim())
                         .getBody();
-                userId = (String) claims.get("user_name");
+                userId = (String) claims.get("userId");
             }catch (Exception e){
                 log.info("token验证异常========" + e.getMessage());
             }
@@ -121,7 +121,7 @@ public class AuthFilter extends ZuulFilter {
                                 // 去掉 Bearer
                                 .parseClaimsJws(tokenModel.getAccess_token())
                                 .getBody();
-                        ctx.addZuulRequestHeader(constant.USER_ID_HEADER, (String) refresh_claims.get("user_name"));
+                        ctx.addZuulRequestHeader(constant.USER_ID_HEADER, (String) refresh_claims.get("userId"));
                         return null;
                     } catch (IOException e) {
                         ctx.setSendZuulResponse(false);

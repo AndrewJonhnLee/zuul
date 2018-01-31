@@ -4,6 +4,8 @@ import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
@@ -13,6 +15,8 @@ import java.io.IOException;
 
 @Component
 public class OkHttpRibbonInterceptor implements Interceptor {
+
+    private static Logger log = LoggerFactory.getLogger(OkHttpRibbonInterceptor.class);
 
     @Autowired
     private LoadBalancerClient client;
@@ -37,6 +41,8 @@ public class OkHttpRibbonInterceptor implements Interceptor {
                 .host(service.getHost())
                 .port(service.getPort())
                 .build();
+
+        log.info("实际访问ip=========="+url.toString());
 
         Request request = original.newBuilder()
                 .url(url)

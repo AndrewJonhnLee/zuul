@@ -116,6 +116,7 @@ public class LoginFilter extends ZuulFilter {
                     ctx.setSendZuulResponse(false);
                     ctx.setResponseStatusCode(constant.FORBID_CODE);
                     ctx.set(constant.FILTER_FLAG_KEY,false);
+                    return null;
                 }
                 String key= constant.TOKEN_KEY_PREFIX+MD5.getMD5(tokenModel.getAccess_token().trim());
                 String value=tokenModel.getRefresh_token();

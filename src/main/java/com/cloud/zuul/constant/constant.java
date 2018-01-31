@@ -17,7 +17,7 @@ public class constant {
     public static final String RESULT_OK="ok";
     public static final String RESULT_FAIL="fail";
     public static final String AUTH_BASIC="zull-client:zull-secret";
-    public static final String AUTH_URL="http://SERVICE_AUTH/oauth/token";
+    public static final String AUTH_URL="http://SERVICE_AUTH1/oauth/token";
     public static final String USER_ID_HEADER="userId";
     public static final int FORBID_CODE=401;
     public static final int SUCCESS_CODE=200;
