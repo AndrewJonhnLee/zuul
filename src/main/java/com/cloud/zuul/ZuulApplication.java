@@ -73,7 +73,6 @@ public class ZuulApplication {
 		config.addAllowedMethod("POST");
 		config.addAllowedMethod("DELETE");
 		config.addAllowedMethod("PATCH");
-		config.addExposedHeader("x-application-context");
 		config.addExposedHeader("authorization");
 		config.addExposedHeader("Authorization");
 		config.addExposedHeader("date");
