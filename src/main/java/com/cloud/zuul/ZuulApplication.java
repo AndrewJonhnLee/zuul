@@ -14,6 +14,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import java.util.concurrent.TimeUnit;
+
 
 @EnableZuulProxy
 @EnableEurekaClient
@@ -32,7 +34,11 @@ public class ZuulApplication {
 	@Primary
 	public OkHttpClient okHttpClient(){
 //		return new OkHttpClient.Builder().addInterceptor(interceptor).build();
-		return new OkHttpClient.Builder().build();
+		return new OkHttpClient.Builder()
+				.readTimeout(100,TimeUnit.SECONDS)//设置读取超时时间
+				.writeTimeout(60,TimeUnit.SECONDS)//设置写的超时时间
+				.connectTimeout(60,TimeUnit.SECONDS)//设置连接超时时间
+				.build();
 	}
 
 	@Bean(name = "loginOkClient")
@@ -73,6 +79,8 @@ public class ZuulApplication {
 		config.addAllowedMethod("POST");
 		config.addAllowedMethod("DELETE");
 		config.addAllowedMethod("PATCH");
+
+
 		config.addExposedHeader("authorization");
 		config.addExposedHeader("Authorization");
 		config.addExposedHeader("date");

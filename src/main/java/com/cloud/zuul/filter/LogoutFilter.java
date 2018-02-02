@@ -16,8 +16,8 @@ import java.io.IOException;
 @Component
 public class LogoutFilter extends ZuulFilter {
 
-    private static Logger log = LoggerFactory.getLogger(LoginFilter.class);
-    private final String LOGOUT_URI="/gate/logout";
+    private static Logger log = LoggerFactory.getLogger(LogoutFilter.class);
+    private final String LOGOUT_URI = "/gate/logout";
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -35,33 +35,39 @@ public class LogoutFilter extends ZuulFilter {
 
     @Override
     public boolean shouldFilter() {
-        return true;
+        RequestContext ctx = RequestContext.getCurrentContext();
+        HttpServletRequest request = ctx.getRequest();
+        String uri = request.getRequestURI();
+        log.info("uri======" + uri);
+        //必须通过身份验证才拦截
+        if (LOGOUT_URI.equals(uri) && ctx.getZuulRequestHeaders().get(constant.USER_ID_HEADER.toLowerCase()) != null) {
+
+            return true;
+        }
+        return false;
     }
 
     @Override
     public Object run() {
         RequestContext ctx = RequestContext.getCurrentContext();
         HttpServletRequest request = ctx.getRequest();
-        String uri=request.getRequestURI();
-        log.info("uri======"+uri);
-        if(LOGOUT_URI.equals(uri)&&request.getHeader(constant.USER_ID_HEADER)!=null){
-
-            String auth_key=request.getHeader(constant.AUTH_HEADER);
-            auth_key=auth_key.replace(constant.AUTH_TYPE,"").trim();
-            String md5Key= constant.TOKEN_KEY_PREFIX+ MD5.getMD5(auth_key);
-            log.info("退出登录md5key========"+md5Key);
+        String auth_key = request.getHeader(constant.AUTH_HEADER);
+        auth_key = auth_key.replace(constant.AUTH_TYPE, "").trim();
+        String md5Key = constant.TOKEN_KEY_PREFIX + MD5.getMD5(auth_key);
+        log.info("退出登录md5key========" + md5Key);
+        if (redisTemplate.hasKey(md5Key)){
             redisTemplate.delete(md5Key);
-            ctx.setSendZuulResponse(false); //不进行路由
-            ctx.set(constant.FILTER_FLAG_KEY,false);
-            ctx.setResponseStatusCode(200);
-
-            try {
-                ctx.getResponse().getWriter().write(constant.RESULT_OK);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
         }
+        ctx.setSendZuulResponse(false); //不进行路由
+        ctx.set(constant.FILTER_FLAG_KEY, false);
+        ctx.setResponseStatusCode(200);
+
+        try {
+            ctx.getResponse().getWriter().write(constant.RESULT_OK);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         return null;
     }
 }

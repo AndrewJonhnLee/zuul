@@ -60,53 +60,57 @@ public class LoginFilter extends ZuulFilter {
 
     @Override
     public boolean shouldFilter() {
-        return true;
+        RequestContext ctx = RequestContext.getCurrentContext();
+        HttpServletRequest request = ctx.getRequest();
+        String uri = request.getRequestURI();
+        log.info("uri======" + uri);
+        if ("POST".equals(request.getMethod()) && LOGIN_URI.equals(uri)) {
+
+            return true;
+        }
+        return false;
     }
 
     @Override
     public Object run() {
         RequestContext ctx = RequestContext.getCurrentContext();
         HttpServletRequest request = ctx.getRequest();
-        String uri = request.getRequestURI();
-        log.info("uri======" + uri);
-        if ("POST".equals(request.getMethod()) && LOGIN_URI.equals(uri)) {
-            Map<String, String[]> map = request.getParameterMap();
-            String username = map.get(USERNAME)[0];
-            String password = map.get(PASSWORD)[0];
+        Map<String, String[]> map = request.getParameterMap();
+        String username = map.get(USERNAME)[0];
+        String password = map.get(PASSWORD)[0];
 
-            Map<String, String> paraMap=new HashMap<String, String>();
-            paraMap.put(USERNAME, username);
-            paraMap.put(PASSWORD, password);
-            paraMap.put("grant_type", PASSWORD);
+        Map<String, String> paraMap = new HashMap<String, String>();
+        paraMap.put(USERNAME, username);
+        paraMap.put(PASSWORD, password);
+        paraMap.put("grant_type", PASSWORD);
 
-            try {
-                TokenModel tokenModel = OkHttpClientManager.getInstance().postRequestMapper(okHttpClient,constant.AUTH_URL,paraMap);
-                if (tokenModel.getAccess_token() == null) {
-                    modifyResult(ctx, constant.FORBID_CODE, constant.RESULT_FAIL);
-                    return null;
-                }
-                String key = constant.TOKEN_KEY_PREFIX + MD5.getMD5(tokenModel.getAccess_token().trim());
-                String value = tokenModel.getRefresh_token();
-                int expire = constant.TOKEN_EXPIRE;
-                log.info("loginFilter登录md5key========" + key);
-                redisTemplate.opsForValue().set(key, value, expire, TimeUnit.SECONDS);
-//                返回头信息携带token
-                ctx.getResponse().addHeader(constant.AUTH_HEADER, tokenModel.getToken_type() + " " + tokenModel.getAccess_token());
-                modifyResult(ctx, constant.SUCCESS_CODE, constant.RESULT_OK);
-
-
-            } catch (IOException e) {
-                //登录失败返回
-                try {
-                    modifyResult(ctx, constant.FORBID_CODE, constant.RESULT_FAIL);
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                }
-                e.printStackTrace();
+        try {
+            TokenModel tokenModel = OkHttpClientManager.getInstance().postRequestMapper(okHttpClient, constant.AUTH_URL, paraMap);
+            if (tokenModel.getAccess_token() == null) {
+                modifyResult(ctx, constant.FORBID_CODE, constant.RESULT_FAIL);
+                return null;
             }
+            String key = constant.TOKEN_KEY_PREFIX + MD5.getMD5(tokenModel.getAccess_token().trim());
+            String value = tokenModel.getRefresh_token();
+            int expire = constant.TOKEN_EXPIRE;
+            log.info("loginFilter登录md5key========" + key);
+            redisTemplate.opsForValue().set(key, value, expire, TimeUnit.SECONDS);
+//                返回头信息携带token
+            ctx.getResponse().addHeader(constant.AUTH_HEADER, tokenModel.getToken_type() + " " + tokenModel.getAccess_token());
+            modifyResult(ctx, constant.SUCCESS_CODE, constant.RESULT_OK);
 
 
+        } catch (IOException e) {
+            //登录失败返回
+            try {
+                modifyResult(ctx, constant.FORBID_CODE, constant.RESULT_FAIL);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            e.printStackTrace();
         }
+
+
         return null;
     }
 
