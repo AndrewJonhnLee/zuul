@@ -66,6 +66,7 @@ public class ZuulApplication {
 		final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		final CorsConfiguration config = new CorsConfiguration();
 		//允许跨域
+//		SendErrorFilter
 		config.setAllowCredentials(true);
 		//允许向该服务器提交请求的URI,*表示全部
 		config.addAllowedOrigin("*");

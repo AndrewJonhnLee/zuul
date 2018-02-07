@@ -64,6 +64,16 @@ public class AuthFilter extends ZuulFilter {
             return (boolean) ctx.get(constant.FILTER_FLAG_KEY);
         }
         List<String> list = Splitter.on("/").splitToList(uri);
+
+        if (list.size() > 3) {
+
+            String start = list.get(1);
+            String flag = list.get(3);
+            if ("zuul".endsWith(start) && COMMON.equals(flag)) {
+                return false;
+            }
+
+        }
         if (list.size() > 2) {
             String flag = list.get(2);
             switch (flag) {
@@ -91,6 +101,7 @@ public class AuthFilter extends ZuulFilter {
         HttpServletRequest request = ctx.getRequest();
 
         String token = request.getHeader(constant.AUTH_HEADER);
+        log.info("获取token====" + token);
         if (token != null) {
             // 解析 Token
             Claims claims;
@@ -98,7 +109,7 @@ public class AuthFilter extends ZuulFilter {
 
             try {
                 claims = parseToken(token, constant.AUTH_TYPE);
-                if (claims != null) {
+                if (claims != null) {//获取userID
                     userId = (String) claims.get(constant.USER_ID_HEADER);
                 }
             } catch (Exception e) {
@@ -106,7 +117,7 @@ public class AuthFilter extends ZuulFilter {
             }
 
             if (userId == null) {
-                return refreshToken(request, ctx);
+                return refreshToken(token, ctx);
             }
 
             ctx.addZuulRequestHeader(constant.USER_ID_HEADER, userId);
@@ -123,14 +134,14 @@ public class AuthFilter extends ZuulFilter {
     /**
      * token刷新
      *
-     * @param request
+     * @param token
      * @param ctx
      * @return
      */
 
-    private Object refreshToken(HttpServletRequest request, RequestContext ctx) {
-        String auth_key = request.getHeader(constant.AUTH_HEADER);
-        auth_key = auth_key.replace(constant.AUTH_TYPE, "").trim();
+    private Object refreshToken(String token, RequestContext ctx) {
+        String auth_key = "";
+        auth_key = token.replace(constant.AUTH_TYPE, "").trim();
         String md5Key = constant.TOKEN_KEY_PREFIX + MD5.getMD5(auth_key);
         if (redisTemplate.hasKey(md5Key)) {
 
@@ -138,28 +149,33 @@ public class AuthFilter extends ZuulFilter {
             Map<String, String> map = new HashMap<String, String>();
             map.put("grant_type", "refresh_token");
             map.put("refresh_token", refresh_token);
+            TokenModel tokenModel = null;
             try {
 
-                TokenModel tokenModel = OkHttpClientManager.getInstance().postRequestMapper(okHttpClient, constant.AUTH_URL, map);
+                tokenModel = OkHttpClientManager.getInstance().postRequestMapper(okHttpClient, constant.AUTH_URL, map);
+
+            } catch (IOException e) {
+                forbidResult(ctx);
+                e.printStackTrace();
+            }
+
+            if (tokenModel.getAccess_token() != null) {
                 String key = constant.TOKEN_KEY_PREFIX + MD5.getMD5(tokenModel.getAccess_token().trim());
                 String value = tokenModel.getRefresh_token();
                 int expire = constant.TOKEN_EXPIRE;
                 log.info("authFilter登录md5key========" + key);
                 redisTemplate.delete(md5Key);
                 redisTemplate.opsForValue().set(key, value, expire, TimeUnit.SECONDS);
-                ctx.getResponse().addHeader(constant.AUTH_HEADER, tokenModel.getToken_type() + " " + tokenModel.getAccess_token());
+                ctx.getResponse().addHeader(constant.AUTH_HEADER, constant.AUTH_TYPE + tokenModel.getAccess_token());
                 Claims refresh_claims = parseToken(tokenModel.getAccess_token(), null);
                 ctx.addZuulRequestHeader(constant.USER_ID_HEADER, (String) refresh_claims.get(constant.USER_ID_HEADER));
-                return null;
-            } catch (IOException e) {
+            } else {
                 forbidResult(ctx);
-                e.printStackTrace();
             }
 
 
         } else {
             forbidResult(ctx);
-            return null;
         }
         return null;
     }

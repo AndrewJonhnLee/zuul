@@ -12,7 +12,7 @@ public class constant {
 
     public static final String TOKEN_KEY_PREFIX="token:";
     public static final String AUTH_HEADER="Authorization";
-    public static final String AUTH_TYPE="bearer ";
+    public static final String AUTH_TYPE="bearer: ";
     public static final String AUTH_TYPE_TRIM="Bearer";
     public static final String RESULT_OK="ok";
     public static final String RESULT_FAIL="fail";

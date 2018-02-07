@@ -17,26 +17,21 @@ import java.util.Set;
 public class OkHttpClientManager {
 
     private static Logger log = LoggerFactory.getLogger(OkHttpClientManager.class);
-    private static OkHttpClientManager mInstance;
     private Gson mGson;
 
 
     private OkHttpClientManager() {
-        //cookie enabled
         mGson = new Gson();
     }
 
     public static OkHttpClientManager getInstance() {
-        if (mInstance == null) {
-            synchronized (OkHttpClientManager.class) {
-                if (mInstance == null) {
-                    mInstance = new OkHttpClientManager();
-                }
-            }
-        }
-        return mInstance;
+        return InnerClass.INSTANCE;
     }
 
+
+    private static class InnerClass {
+        private static final OkHttpClientManager INSTANCE = new OkHttpClientManager();
+    }
 
     public TokenModel postRequestMapper(OkHttpClient okHttpClient,String url,Map<String, String> params) throws IOException {
 

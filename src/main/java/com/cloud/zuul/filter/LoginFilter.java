@@ -96,7 +96,7 @@ public class LoginFilter extends ZuulFilter {
             log.info("loginFilter登录md5key========" + key);
             redisTemplate.opsForValue().set(key, value, expire, TimeUnit.SECONDS);
 //                返回头信息携带token
-            ctx.getResponse().addHeader(constant.AUTH_HEADER, tokenModel.getToken_type() + " " + tokenModel.getAccess_token());
+            ctx.getResponse().addHeader(constant.AUTH_HEADER, constant.AUTH_TYPE + tokenModel.getAccess_token());
             modifyResult(ctx, constant.SUCCESS_CODE, constant.RESULT_OK);
 
 
