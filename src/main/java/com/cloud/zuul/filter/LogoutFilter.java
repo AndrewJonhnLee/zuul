@@ -1,7 +1,6 @@
 package com.cloud.zuul.filter;
 
 import com.cloud.zuul.constant.constant;
-import com.cloud.zuul.utils.MD5;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.slf4j.Logger;
@@ -11,7 +10,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 
 @Component
 public class LogoutFilter extends ZuulFilter {
@@ -52,21 +50,28 @@ public class LogoutFilter extends ZuulFilter {
         RequestContext ctx = RequestContext.getCurrentContext();
         HttpServletRequest request = ctx.getRequest();
         String auth_key = request.getHeader(constant.AUTH_HEADER);
-        auth_key = auth_key.replace(constant.AUTH_TYPE, "").trim();
-        String md5Key = constant.TOKEN_KEY_PREFIX + MD5.getMD5(auth_key);
-        log.info("退出登录md5key========" + md5Key);
-        if (redisTemplate.hasKey(md5Key)){
-            redisTemplate.delete(md5Key);
+        String token_Key = constant.TOKEN_KEY_PREFIX + auth_key;
+        String refresh_Key = constant.REFRESH_KEY_PREFIX + auth_key;
+        log.info("退出登录md5key========" + auth_key);
+        if (redisTemplate.hasKey(token_Key)){
+            redisTemplate.delete(token_Key);
         }
-        ctx.setSendZuulResponse(false); //不进行路由
-        ctx.set(constant.FILTER_FLAG_KEY, false);
-        ctx.setResponseStatusCode(200);
 
-        try {
-            ctx.getResponse().getWriter().write(constant.RESULT_OK);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (redisTemplate.hasKey(refresh_Key)){
+            redisTemplate.delete(refresh_Key);
         }
+        if (ctx.getResponseBody() == null) {
+            ctx.setResponseBody("ok");
+            ctx.setSendZuulResponse(false);//true,会进行路由，也就是会调用api服务提供者
+            ctx.setResponseStatusCode(200);
+        }
+        ctx.set(constant.FILTER_FLAG_KEY, false);
+//
+//        try {
+//            ctx.getResponse().getWriter().write(constant.RESULT_OK);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
         return null;
     }

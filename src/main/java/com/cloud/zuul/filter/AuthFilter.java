@@ -140,9 +140,7 @@ public class AuthFilter extends ZuulFilter {
      */
 
     private Object refreshToken(String token, RequestContext ctx) {
-        String auth_key = "";
-        auth_key = token.replace(constant.AUTH_TYPE, "").trim();
-        String md5Key = constant.TOKEN_KEY_PREFIX + MD5.getMD5(auth_key);
+        String md5Key = constant.REFRESH_KEY_PREFIX + token;
         if (redisTemplate.hasKey(md5Key)) {
 
             String refresh_token = (String) redisTemplate.opsForValue().get(md5Key);
@@ -160,15 +158,24 @@ public class AuthFilter extends ZuulFilter {
             }
 
             if (tokenModel.getAccess_token() != null) {
-                String key = constant.TOKEN_KEY_PREFIX + MD5.getMD5(tokenModel.getAccess_token().trim());
-                String value = tokenModel.getRefresh_token();
-                int expire = constant.TOKEN_EXPIRE;
-                log.info("authFilter登录md5key========" + key);
+
+
+                redisTemplate.delete(constant.TOKEN_KEY_PREFIX+token);
                 redisTemplate.delete(md5Key);
-                redisTemplate.opsForValue().set(key, value, expire, TimeUnit.SECONDS);
-                ctx.getResponse().addHeader(constant.AUTH_HEADER, constant.AUTH_TYPE + tokenModel.getAccess_token());
-                Claims refresh_claims = parseToken(tokenModel.getAccess_token(), null);
-                ctx.addZuulRequestHeader(constant.USER_ID_HEADER, (String) refresh_claims.get(constant.USER_ID_HEADER));
+
+
+                String md5_key_new=MD5.getMD5(tokenModel.getAccess_token().trim());
+                String token_key = constant.TOKEN_KEY_PREFIX + md5_key_new;
+                log.info("authFilter登录md5key========" + md5_key_new);
+                String token_value = tokenModel.getAccess_token();
+                String refresh_key=constant.REFRESH_KEY_PREFIX + md5_key_new;;
+                String refresh_value=tokenModel.getRefresh_token();
+                redisTemplate.opsForValue().set(token_key, token_value, constant.TOKEN_EXPIRE, TimeUnit.SECONDS);
+                redisTemplate.opsForValue().set(refresh_key, refresh_value, constant.REFRESH_TOKEN_EXPIRE, TimeUnit.SECONDS);
+//
+
+                ctx.getResponse().addHeader(constant.AUTH_HEADER, constant.AUTH_TYPE + md5_key_new);
+                ctx.addZuulRequestHeader(constant.USER_ID_HEADER, tokenModel.getUserId());
             } else {
                 forbidResult(ctx);
             }
@@ -183,8 +190,24 @@ public class AuthFilter extends ZuulFilter {
 
     private void forbidResult(RequestContext ctx) {
 
-        ctx.setSendZuulResponse(false);
-        ctx.setResponseStatusCode(constant.FORBID_CODE);
+        if (ctx.getResponseBody() == null) {
+            ctx.setResponseBody("error");
+            ctx.setSendZuulResponse(false);//true,会进行路由，也就是会调用api服务提供者
+            //Disable SimpleHostRoutingFilter
+            ctx.setRouteHost(null);
+            //Disable RibbonRoutingFilter
+            ctx.remove("serviceId");
+            ctx.setResponseStatusCode(constant.FORBID_CODE);
+        }
+
+
+//        String bodyJson = objectMapper.writeValueAsString(body);
+//        ctx.setResponseStatusCode(httpCode.value());
+//        ctx.setResponseBody(bodyJson);
+//        ctx.addZuulResponseHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE);
+//        //We do not expect bytes to be gzipped
+//        ctx.setResponseGZipped(false);
+
 
     }
 
@@ -197,14 +220,19 @@ public class AuthFilter extends ZuulFilter {
      */
     private Claims parseToken(String token, String replace) {
 
+        String pure_token=token.replace(replace, "").trim();
+        String access_token_key=constant.TOKEN_KEY_PREFIX+pure_token;
+        if(!redisTemplate.hasKey(access_token_key)){
+            return null;
+        }
+        String access_token=""+redisTemplate.opsForValue().get(access_token_key);
         final String SECRET = Base64.getEncoder().encodeToString("!@#$QWER1234qwer".getBytes());
         return Jwts.parser()
                 // 验签
                 .setSigningKey(SECRET)
                 // 去掉 Bearer
-                .parseClaimsJws(replace == null ? token : token.replace(replace, "").trim())
+                .parseClaimsJws(access_token)
                 .getBody();
-
 
     }
 

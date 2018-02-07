@@ -90,13 +90,16 @@ public class LoginFilter extends ZuulFilter {
                 modifyResult(ctx, constant.FORBID_CODE, constant.RESULT_FAIL);
                 return null;
             }
-            String key = constant.TOKEN_KEY_PREFIX + MD5.getMD5(tokenModel.getAccess_token().trim());
-            String value = tokenModel.getRefresh_token();
-            int expire = constant.TOKEN_EXPIRE;
-            log.info("loginFilter登录md5key========" + key);
-            redisTemplate.opsForValue().set(key, value, expire, TimeUnit.SECONDS);
+            String md5_key=MD5.getMD5(tokenModel.getAccess_token().trim());
+            String token_key = constant.TOKEN_KEY_PREFIX + md5_key;
+            String token_value = tokenModel.getAccess_token();
+            String refresh_key=constant.REFRESH_KEY_PREFIX + md5_key;;
+            String refresh_value=tokenModel.getRefresh_token();
+            log.info("loginFilter登录md5key========" + md5_key);
+            redisTemplate.opsForValue().set(token_key, token_value, constant.TOKEN_EXPIRE, TimeUnit.SECONDS);
+            redisTemplate.opsForValue().set(refresh_key, refresh_value, constant.REFRESH_TOKEN_EXPIRE, TimeUnit.SECONDS);
 //                返回头信息携带token
-            ctx.getResponse().addHeader(constant.AUTH_HEADER, constant.AUTH_TYPE + tokenModel.getAccess_token());
+            ctx.getResponse().addHeader(constant.AUTH_HEADER, constant.AUTH_TYPE + md5_key);
             modifyResult(ctx, constant.SUCCESS_CODE, constant.RESULT_OK);
 
 
@@ -116,10 +119,12 @@ public class LoginFilter extends ZuulFilter {
 
     private void modifyResult(RequestContext ctx, int statusCode, String content) throws IOException {
 
-        ctx.setSendZuulResponse(false);//true,会进行路由，也就是会调用api服务提供者
+        if (ctx.getResponseBody() == null) {
+            ctx.setResponseBody(content);
+            ctx.setSendZuulResponse(false);//true,会进行路由，也就是会调用api服务提供者
+        }
         ctx.setResponseStatusCode(statusCode);
         ctx.set(constant.FILTER_FLAG_KEY, false);
-        ctx.getResponse().getWriter().write(content);
 
     }
 
